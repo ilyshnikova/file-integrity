@@ -52,7 +52,7 @@ std::string WorkSpace::Respond(const std::string& query) {
 			AddCheckSum(match[1]);
 			return "Ok";
 		} else {
-			return "Incorrent query."
+			return "Incorrent query.";
 		}
 	} catch (std::exception& e) {
 		return e.what();

@@ -1,4 +1,4 @@
-all: fi-server fi-client daemon
+all: fi-server fi-client
 BASEP = -g -Wall -std=c++0x -gdwarf-3
 
 exception.o: exception.cpp
@@ -13,10 +13,7 @@ daemon.o: daemon.cpp
 server.o: server.cpp
 	g++ $(BASEP) -c server.cpp
 
-daemon: daemon.o logger.o exception.o server.o
-	g++ $(BASEP) daemon.o logger.o exception.o server.o -o daemon
-
-client: client.cpp
+client.o: client.cpp
 	g++ $(BASEP) -c client.cpp
 
 fi-client: daemon.o logger.o exception.o client.o
@@ -35,4 +32,4 @@ fi-server: fi-server.o exception.o logger.o daemon.o file-integrity.o mysql.o
 	g++ $(BASEP) -lboost_regex  -lmysqlcppconn -lcrypto  fi-server.o exception.o logger.o daemon.o file-integrity.o mysql.o -o server
 
 clean:
-	rm -rf *.o daemon client server
+	rm -rf *.o client server
