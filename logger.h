@@ -5,7 +5,7 @@
 #include <iostream>
 #include <stdio.h>
 
-class Logger {
+class Logger : public std::ostream {
 public:
 
 	template

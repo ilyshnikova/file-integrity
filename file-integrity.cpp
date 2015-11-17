@@ -2,17 +2,18 @@
 #include <fstream>
 
 #include <boost/regex.hpp>
-#include "mysql.h"
+#include "BerkeleyDB.h"
 #include "daemon.h"
 #include "file-integrity.h"
 #include "exception.h"
+
 
 
 /*	WorkSpace	*/
 
 WorkSpace::WorkSpace()
 : DaemonBase("127.0.0.1", "8081", 0)
-, checksum_table("CheckSums|FileName:string|CheckSum:string")
+, checksum_table("CheckSums.db", "./db")
 {
 	Daemon();
 }
@@ -99,7 +100,7 @@ std::string WorkSpace::GetAllFile(const std::string& file_name) const {
 
 		file = std::string(buffer);
 
-		delete[] buffer;
+		delete buffer;
 	}
 
 	logger << "\"" +  file  + "\"";
@@ -110,24 +111,25 @@ std::string WorkSpace::GetAllFile(const std::string& file_name) const {
 
 std::string WorkSpace::FilesEvaluation(const std::string& file_name) const {
 	std::string res = Evaluation((GetAllFile(file_name)));
-	std::cout << res << std::endl;
+	logger << res;
 	return res;
 }
 
 void WorkSpace::AddCheckSum(const std::string& file_name) {
 	std::string sum = FilesEvaluation(file_name);
 	checksum_table.Insert(file_name, sum);
-	checksum_table.Execute();
 }
 
 
 bool WorkSpace::CheckFile(const std::string& file_name) {
-	auto file_info = checksum_table.Select("FileName = \"" + file_name + "\"");
-	if (file_info == checksum_table.SelectEnd()) {
-		throw FIException(256247, "This file is not under control.");
-	}
-	std::string last_sum = file_info["CheckSum"];
-	std::string current_sum;
+//	std::string last_sum = ;
+//
+//	auto file_info = checksum_table.Select("FileName = \"" + file_name + "\"");
+//	if (file_info == checksum_table.SelectEnd()) {
+//		throw FIException(256247, "This file is not under control.");
+//	}
+//	std::string last_sum = file_info["CheckSum"];
+//	std::string current_sum;
 
-	return FilesEvaluation(file_name) == std::string(file_info["CheckSum"]);
+	return FilesEvaluation(file_name) == std::string(checksum_table.Select(file_name));
 }

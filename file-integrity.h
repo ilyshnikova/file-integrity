@@ -1,7 +1,7 @@
 #ifndef FI
 #define FI
 
-#include "mysql.h"
+#include "BerkeleyDB.h"
 #include "daemon.h"
 
 class WorkSpace : public DaemonBase {
