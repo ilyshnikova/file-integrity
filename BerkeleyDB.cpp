@@ -1,14 +1,7 @@
-//#include <cppconn/driver.h>
-//#include <cppconn/exception.h>
-//#include <cppconn/resultset.h>
-//#include <cppconn/statement.h>
-//#include <cppconn/prepared_statement.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <ctime>
-//#include "mysql.h"
-//#include "mysql_connection.h"
 #include "BerkeleyDB.h"
 #include "exception.h"
 #include "logger.h"
@@ -89,7 +82,7 @@ Table::Table(const std::string& table_name, const std::string& path)
 	env.set_error_stream(&logger);
 	env.open(path.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
 	pdb = new Db(&env, 0);
-	pdb->open(NULL, table_name.c_str(), NULL, DB_BTREE, DB_CREATE | DB_TRUNCATE, 0);
+	pdb->open(NULL, table_name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
 }
 
 
@@ -154,15 +147,23 @@ StringType Table::Select(const std::string& key) {
 
 	return StringType((char*)(data.get_data()));
 }
-//TODO//
-void Table::Delete(const std::string& query_where) const {
-//	sql::Statement* stmt = con->createStatement();
-//
-//	logger << "from mysql.cpp: query = delete from  " + table_name + " where "  + query_where;
-//
-//	stmt->execute("delete from  " + table_name + " where "  + query_where);
+
+void Table::Delete(const std::string& key) const {
+	if (!DoesKeyExist(key))  {
+		throw FIException(120312, "Key " + key + " does not exist in db.");
+	}
+	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size());
+	if (pdb->del(NULL, &dkey, 0) != 0) {
+		throw FIException(124532, "Can't delete " + key + ".");
+	}
 }
 
+bool Table::DoesKeyExist(const std::string& key) const {
+	Dbt data;
+	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size());
+	return (pdb->get(NULL, &dkey, &data, 0) != DB_NOTFOUND);
+
+}
 
 Table::~Table() {
 	if (pdb != NULL) {

@@ -1,12 +1,5 @@
 #ifndef BDB
 #define BDB
-
-//#include <cppconn/driver.h>
-//#include <cppconn/exception.h>
-//#include <cppconn/resultset.h>
-//#include <cppconn/statement.h>
-
-//#include <cppconn/prepared_statement.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -17,7 +10,6 @@
 #include <iomanip>
 
 #include <db_cxx.h>
-//#include "mysql_connection.h"
 #include "exception.h"
 #include "logger.h"
 
@@ -96,7 +88,9 @@ public:
 
 	StringType Select(const std::string& key);
 
-	void Delete(const std::string& query_where) const;
+	void Delete(const std::string& keuy) const;
+
+	bool DoesKeyExist(const std::string& key) const;
 
 	~Table();
 };
