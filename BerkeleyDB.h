@@ -64,7 +64,7 @@ private:
 
 	public:
 
-		Rows(Db* pdb);
+		Rows(Db* pdb, bool is_end, const std::string& table_name, const std::string& path);
 
 		bool operator==(const Rows& other) const;
 
@@ -86,11 +86,15 @@ public:
 
 	Table& Insert(const StringType& key, const StringType& value);
 
-	StringType Select(const std::string& key);
+	StringType Select(const std::string& key) const;
 
 	void Delete(const std::string& keuy) const;
 
 	bool DoesKeyExist(const std::string& key) const;
+
+	Rows begin();
+
+	Rows end();
 
 	~Table();
 };

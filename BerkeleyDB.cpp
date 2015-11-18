@@ -36,7 +36,7 @@ StringType::StringType(const std::time_t value)
 {}
 
 StringType::StringType(char* value)
-: value(std::string(value))
+: value((value != NULL) ? std::string(value) : "")
 {}
 
 
@@ -73,8 +73,8 @@ std::vector<std::string> Split(const std::string& string, const char separator) 
 
 
 Table::Table(const std::string& table_name, const std::string& path)
-: table_name()
-, path()
+: table_name(table_name)
+, path(path)
 , env(0)
 , pdb()
 , select_query()
@@ -83,17 +83,39 @@ Table::Table(const std::string& table_name, const std::string& path)
 	env.open(path.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
 	pdb = new Db(&env, 0);
 	pdb->open(NULL, table_name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
+
+//	Dbc *cursorp;
+//	Dbt key;
+//	Dbt value;
+//
+//	logger << DB_NOTFOUND;
+//	pdb->cursor(NULL, &cursorp, 0);
+//	int ret = cursorp->get(&key, &value, DB_NEXT);
+//	logger << ret;
+//	logger << std::string((char*)key.get_data());
+
 }
 
 
-Table::Rows::Rows(Db* pdb)
+Table::Rows::Rows(Db* pdb, bool is_end, const std::string& table_name, const std::string& path)
 : cursorp()
 , index(0)
 , key()
 , value()
-, is_end(false)
+, is_end(is_end)
 {
-	pdb->cursor(NULL, &cursorp, 0);
+//	DbEnv env(0);
+//	env.set_error_stream(&logger);
+//	env.open(path.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
+//	pdb = new Db(&env, 0);
+//	pdb->open(NULL, table_name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
+	if (!is_end) {
+		pdb->cursor(NULL, &cursorp, 0);
+		int ret = cursorp->get(&key, &value, DB_NEXT);
+//	logger << ret;
+//	logger << std::string((char*)key.get_data());
+		is_end = (ret != 0);
+	}
 }
 
 bool Table::Rows::operator==(const Rows& other) const {
@@ -104,14 +126,24 @@ bool Table::Rows::operator==(const Rows& other) const {
 }
 
 bool Table::Rows::operator!=(const Rows& other) const {
-	return !(other == *this);
+//	logger << "comp :";
+//	logger << logger << (is_end ? std::string("true") : std::string("false")) + "with" + (other.is_end ? "true" : "false");;
+//	if (other.is_end != is_end) {
+//		return true;
+//	} else {
+//		return false;
+//	}
+	return !(other.is_end == is_end);
 }
 
 Table::Rows& Table::Rows::operator++() {
-
+//	logger << std::string("++");
+//	logger << (is_end ? "true" : "false");
 	++index;
 	int ret = cursorp->get(&key, &value, DB_NEXT);
-	is_end = !ret;
+//	logger << ret;
+	is_end = (ret != 0);
+//	logger << (is_end ? "true" : "false");
 	return *this;
 }
 
@@ -124,8 +156,18 @@ StringType Table::Rows::Value() const {
 }
 
 
+Table::Rows Table::begin() {
+	return Rows(pdb, false, table_name, path)	;
+}
+
+
+Table::Rows Table::end() {
+	return Rows(pdb, true, table_name, path);
+}
+
+
 Table& Table::Insert(const StringType& key, const StringType& value) {
-	Dbt db_key(const_cast<char*>(std::string(key).data()), std::string(key).size());
+	Dbt db_key(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	Dbt db_value(const_cast<char*>(std::string(value).data()), std::string(value).size() + 1);
 
 	pdb->put(NULL, &db_key, &db_value, 0);
@@ -134,14 +176,16 @@ Table& Table::Insert(const StringType& key, const StringType& value) {
 }
 
 
-StringType Table::Select(const std::string& key) {
-	Dbt db_key(const_cast<char*>(std::string(key).data()), std::string(key).size());
+StringType Table::Select(const std::string& key) const {
+	Dbt db_key(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	char buffer[1024];
 	Dbt data;
 	data.set_data(buffer);
 	data.set_ulen(1024);
 	data.set_flags(DB_DBT_USERMEM);
+//	logger << DB_NOTFOUND;
 	if (pdb->get(NULL, &db_key, &data, 0) == DB_NOTFOUND) {
+//		logger << std::string((char*)data.get_data());
 		throw FIException(145131, "Value with key " + key + " does not exist.");
 	}
 
@@ -152,7 +196,7 @@ void Table::Delete(const std::string& key) const {
 	if (!DoesKeyExist(key))  {
 		throw FIException(120312, "Key " + key + " does not exist in db.");
 	}
-	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size());
+	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	if (pdb->del(NULL, &dkey, 0) != 0) {
 		throw FIException(124532, "Can't delete " + key + ".");
 	}
@@ -160,7 +204,7 @@ void Table::Delete(const std::string& key) const {
 
 bool Table::DoesKeyExist(const std::string& key) const {
 	Dbt data;
-	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size());
+	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	return (pdb->get(NULL, &dkey, &data, 0) != DB_NOTFOUND);
 
 }

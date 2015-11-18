@@ -8,6 +8,10 @@
 #include "exception.h"
 #include <sys/stat.h>
 #include <unistd.h>
+#include <cstdio>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <stdlib.h>
 
 
 /*	WorkSpace	*/
@@ -16,7 +20,12 @@ WorkSpace::WorkSpace()
 : DaemonBase("127.0.0.1", "8081", 0)
 , checksum_table("CheckSums.db", "./db")
 {
-	Daemon();
+	if (!fork()) {
+		Daemon();
+		wait(NULL);
+	} else {
+		RecCheck();
+	}
 }
 
 std::string WorkSpace::Respond(const std::string& query) {
@@ -59,7 +68,6 @@ std::string WorkSpace::Respond(const std::string& query) {
 			}
 
 			AddCheckSum(match[1]);
-			return "Ok";
 		} else if (
 			boost::regex_match(
 				query,
@@ -68,6 +76,20 @@ std::string WorkSpace::Respond(const std::string& query) {
 			)
 		) {
 			checksum_table.Delete(match[1]);
+		} else if (
+			boost::regex_match(
+				query,
+				match,
+				boost::regex("update\\s+file\\s+(.+)")
+			)
+		) {
+			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
+				throw FIException(171142, "File with name " + match[1] + " does not exits.");
+			}
+
+			AddCheckSum(match[1]);
+			return "Ok";
+
 		} else {
 			return "Incorrent query.";
 		}
@@ -136,6 +158,27 @@ void WorkSpace::AddCheckSum(const std::string& file_name) {
 }
 
 
-bool WorkSpace::CheckFile(const std::string& file_name) {
-	return FilesEvaluation(file_name) == std::string(checksum_table.Select(file_name));
+bool WorkSpace::CheckFile(const std::string& file_name) const {
+	return (FilesEvaluation(file_name) == std::string(checksum_table.Select(file_name)));
 }
+
+
+void WorkSpace::RecCheck() {
+	while (true) {
+//		logger << "while";
+		for (auto it = checksum_table.begin(); it != checksum_table.end(); ++it) {
+//			logger << "THERE";
+//			logger << std::string(it.Key());
+			if (!CheckFile(it.Key())) {
+				logger << std::string("!!!!  ")	+ std::string(it.Key())  + "  changed !!!!";
+			} else {
+				logger << std::string(it.Key())  + " ok";
+			}
+			AddCheckSum(std::string(it.Key()));
+		}
+
+			sleep(5);
+	}
+}
+
+
