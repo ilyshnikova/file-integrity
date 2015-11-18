@@ -83,17 +83,6 @@ Table::Table(const std::string& table_name, const std::string& path)
 	env.open(path.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
 	pdb = new Db(&env, 0);
 	pdb->open(NULL, table_name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
-
-//	Dbc *cursorp;
-//	Dbt key;
-//	Dbt value;
-//
-//	logger << DB_NOTFOUND;
-//	pdb->cursor(NULL, &cursorp, 0);
-//	int ret = cursorp->get(&key, &value, DB_NEXT);
-//	logger << ret;
-//	logger << std::string((char*)key.get_data());
-
 }
 
 
@@ -104,16 +93,9 @@ Table::Rows::Rows(Db* pdb, bool is_end, const std::string& table_name, const std
 , value()
 , is_end(is_end)
 {
-//	DbEnv env(0);
-//	env.set_error_stream(&logger);
-//	env.open(path.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
-//	pdb = new Db(&env, 0);
-//	pdb->open(NULL, table_name.c_str(), NULL, DB_BTREE, DB_CREATE, 0);
 	if (!is_end) {
 		pdb->cursor(NULL, &cursorp, 0);
 		int ret = cursorp->get(&key, &value, DB_NEXT);
-//	logger << ret;
-//	logger << std::string((char*)key.get_data());
 		is_end = (ret != 0);
 	}
 }
@@ -126,24 +108,13 @@ bool Table::Rows::operator==(const Rows& other) const {
 }
 
 bool Table::Rows::operator!=(const Rows& other) const {
-//	logger << "comp :";
-//	logger << logger << (is_end ? std::string("true") : std::string("false")) + "with" + (other.is_end ? "true" : "false");;
-//	if (other.is_end != is_end) {
-//		return true;
-//	} else {
-//		return false;
-//	}
 	return !(other.is_end == is_end);
 }
 
 Table::Rows& Table::Rows::operator++() {
-//	logger << std::string("++");
-//	logger << (is_end ? "true" : "false");
 	++index;
 	int ret = cursorp->get(&key, &value, DB_NEXT);
-//	logger << ret;
 	is_end = (ret != 0);
-//	logger << (is_end ? "true" : "false");
 	return *this;
 }
 
@@ -183,9 +154,7 @@ StringType Table::Select(const std::string& key) const {
 	data.set_data(buffer);
 	data.set_ulen(1024);
 	data.set_flags(DB_DBT_USERMEM);
-//	logger << DB_NOTFOUND;
 	if (pdb->get(NULL, &db_key, &data, 0) == DB_NOTFOUND) {
-//		logger << std::string((char*)data.get_data());
 		throw FIException(145131, "Value with key " + key + " does not exist.");
 	}
 

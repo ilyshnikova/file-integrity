@@ -165,12 +165,14 @@ bool WorkSpace::CheckFile(const std::string& file_name) const {
 
 void WorkSpace::RecCheck() {
 	while (true) {
-//		logger << "while";
 		for (auto it = checksum_table.begin(); it != checksum_table.end(); ++it) {
-//			logger << "THERE";
-//			logger << std::string(it.Key());
 			if (!CheckFile(it.Key())) {
+				std::string message = "File " + std::string(it.Key()) + " has changed.";
+				std::string mail = "echo \"" + message + "\" | mail -s \"file-integrity\" \"ilyshnikova@yandex.ru\"";
+				logger << mail;
+				system(mail.c_str());
 				logger << std::string("!!!!  ")	+ std::string(it.Key())  + "  changed !!!!";
+
 			} else {
 				logger << std::string(it.Key())  + " ok";
 			}
