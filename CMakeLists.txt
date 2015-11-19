@@ -31,5 +31,5 @@ add_library(lib_db STATIC BerkeleyDB.cpp)
 add_library(lib_file_integrity STATIC file-integrity.cpp)
 add_executable(fi-server fi-server.cpp)
 
-target_link_libraries(fi-server lib_daemon lib_logger lib_exception lib_file_integrity lib_db db_cxx  ${Boost_LIBRARIES} ${DB_LIBRARIES} ${OpenSSL_LIBRARIES})
+target_link_libraries(fi-server lib_daemon lib_logger lib_exception lib_file_integrity lib_db ${Boost_LIBRARIES} ${BDB_LIBRARY} ${OpenSSL_LIBRARIES})
 
