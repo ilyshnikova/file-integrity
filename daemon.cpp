@@ -234,8 +234,6 @@ void DaemonBase::Daemon() {
 	struct sockaddr_in cli_addr;
 	socklen_t clilen = sizeof(cli_addr);
 
-
-
 	while (1) {
 
 		int client_socketfd = accept(socketfd, (struct sockaddr *) &cli_addr, &clilen);
