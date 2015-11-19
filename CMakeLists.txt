@@ -19,16 +19,17 @@ target_link_libraries(fi-client lib_daemon lib_logger lib_exception)
 find_package(Boost COMPONENTS regex REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
-find_package(MySQL REQUIRED)
-include_directories(${MySQL_INCLUDE_DIRS})
+
+find_package(BerkeleyDB REQUIRED)
+include_directories(${DB_INCLUDE_DIRS})
 
 
 find_package(OpenSSL REQUIRED)
 include_directories(${OpenSSL_INCLUDE_DIRS})
 
-add_library(lib_mysql STATIC mysql.cpp)
+add_library(lib_db STATIC BerkeleyDB.cpp)
 add_library(lib_file_integrity STATIC file-integrity.cpp)
 add_executable(fi-server fi-server.cpp)
 
-target_link_libraries(fi-server lib_daemon lib_logger lib_exception lib_file_integrity lib_mysql mysqlcppconn ${Boost_LIBRARIES} ${MySQL_LIBRARIES} ${OpenSSL_LIBRARIES})
+target_link_libraries(fi-server lib_daemon lib_logger lib_exception lib_file_integrity lib_db db_cxx  ${Boost_LIBRARIES} ${DB_LIBRARIES} ${OpenSSL_LIBRARIES})
 

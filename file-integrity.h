@@ -1,7 +1,7 @@
 #ifndef FI
 #define FI
 
-#include "mysql.h"
+#include "BerkeleyDB.h"
 #include "daemon.h"
 
 class WorkSpace : public DaemonBase {
@@ -10,7 +10,7 @@ private:
 
 	std::string Respond(const std::string& query);
 
-	bool CheckFile(const std::string& file_name);
+	bool CheckFile(const std::string& file_name) const;
 
 	std::string Evaluation(const std::string& string) const;
 
@@ -19,6 +19,8 @@ private:
 	std::string FilesEvaluation(const std::string& file_name) const;
 
 	void AddCheckSum(const std::string& file_name);
+
+	void RecCheck();
 
 public:
 

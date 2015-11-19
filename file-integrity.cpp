@@ -2,19 +2,30 @@
 #include <fstream>
 
 #include <boost/regex.hpp>
-#include "mysql.h"
+#include "BerkeleyDB.h"
 #include "daemon.h"
 #include "file-integrity.h"
 #include "exception.h"
+#include <sys/stat.h>
+#include <unistd.h>
+#include <cstdio>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <stdlib.h>
 
 
 /*	WorkSpace	*/
 
 WorkSpace::WorkSpace()
 : DaemonBase("127.0.0.1", "8081", 0)
-, checksum_table("CheckSums|FileName:string|CheckSum:string")
+, checksum_table("CheckSums.db", "./db")
 {
-	Daemon();
+	if (!fork()) {
+		Daemon();
+		wait(NULL);
+	} else {
+		RecCheck();
+	}
 }
 
 std::string WorkSpace::Respond(const std::string& query) {
@@ -37,6 +48,9 @@ std::string WorkSpace::Respond(const std::string& query) {
 				boost::regex("check\\s+file\\s+(.+)")
 			)
 		) {
+			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
+				throw FIException(142142, "File with name " + match[1] + " does not exits.");
+			}
 			if (CheckFile(match[1])) {
 				return "File hasn't changed.";
 			} else {
@@ -49,8 +63,33 @@ std::string WorkSpace::Respond(const std::string& query) {
 				boost::regex("add\\s+file\\s+(.+)")
 			)
 		) {
+			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
+				throw FIException(171142, "File with name " + match[1] + " does not exits.");
+			}
+
+			AddCheckSum(match[1]);
+		} else if (
+			boost::regex_match(
+				query,
+				match,
+				boost::regex("delete\\s+file\\s+(.+)")
+			)
+		) {
+			checksum_table.Delete(match[1]);
+		} else if (
+			boost::regex_match(
+				query,
+				match,
+				boost::regex("update\\s+file\\s+(.+)")
+			)
+		) {
+			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
+				throw FIException(171142, "File with name " + match[1] + " does not exits.");
+			}
+
 			AddCheckSum(match[1]);
 			return "Ok";
+
 		} else {
 			return "Incorrent query.";
 		}
@@ -87,7 +126,7 @@ std::string WorkSpace::GetAllFile(const std::string& file_name) const {
 		int length = is.tellg();
 		is.seekg (0, is.beg);
 
-		char * buffer = new char [length];
+		char buffer[length];
 		is.read (buffer,length);
 
 		if (!is) {
@@ -99,7 +138,6 @@ std::string WorkSpace::GetAllFile(const std::string& file_name) const {
 
 		file = std::string(buffer);
 
-		delete[] buffer;
 	}
 
 	logger << "\"" +  file  + "\"";
@@ -110,24 +148,39 @@ std::string WorkSpace::GetAllFile(const std::string& file_name) const {
 
 std::string WorkSpace::FilesEvaluation(const std::string& file_name) const {
 	std::string res = Evaluation((GetAllFile(file_name)));
-	std::cout << res << std::endl;
+	logger << res;
 	return res;
 }
 
 void WorkSpace::AddCheckSum(const std::string& file_name) {
 	std::string sum = FilesEvaluation(file_name);
 	checksum_table.Insert(file_name, sum);
-	checksum_table.Execute();
 }
 
 
-bool WorkSpace::CheckFile(const std::string& file_name) {
-	auto file_info = checksum_table.Select("FileName = \"" + file_name + "\"");
-	if (file_info == checksum_table.SelectEnd()) {
-		throw FIException(256247, "This file is not under control.");
+bool WorkSpace::CheckFile(const std::string& file_name) const {
+	return (FilesEvaluation(file_name) == std::string(checksum_table.Select(file_name)));
+}
+
+
+void WorkSpace::RecCheck() {
+	while (true) {
+		for (auto it = checksum_table.begin(); it != checksum_table.end(); ++it) {
+			if (!CheckFile(it.Key())) {
+				std::string message = "File " + std::string(it.Key()) + " has changed.";
+				std::string mail = "echo \"" + message + "\" | mail -s \"file-integrity\" \"ilyshnikova@yandex.ru\"";
+				logger << mail;
+				system(mail.c_str());
+				logger << std::string("!!!!  ")	+ std::string(it.Key())  + "  changed !!!!";
+
+			} else {
+				logger << std::string(it.Key())  + " ok";
+			}
+			AddCheckSum(std::string(it.Key()));
+		}
+
+			sleep(5);
 	}
-	std::string last_sum = file_info["CheckSum"];
-	std::string current_sum;
-
-	return FilesEvaluation(file_name) == std::string(file_info["CheckSum"]);
 }
+
+
