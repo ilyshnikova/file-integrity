@@ -90,6 +90,19 @@ std::string WorkSpace::Respond(const std::string& query) {
 			AddCheckSum(match[1]);
 			return "Ok";
 
+		} else if (
+			boost::regex_match(
+				query,
+				match,
+				boost::regex("help")
+			)
+		) {
+			return
+				std::string("Queries:\n")
+				+"\tadd file <filename>\n"
+				+ "\tdelete file <filename>\n"
+				+ "\tcheck file <filname>\n"
+				+ "\tupdate file <filename>";
 		} else {
 			return "Incorrent query.";
 		}

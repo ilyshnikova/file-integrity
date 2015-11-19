@@ -12,8 +12,8 @@ add_executable(daemon daemon.cpp)
 target_link_libraries(daemon lib_exception lib_logger lib_server)
 
 add_library(lib_client STATIC client.cpp)
-add_executable(fi-client client.cpp)
-target_link_libraries(fi-client lib_daemon lib_logger lib_exception)
+add_executable(client client.cpp)
+target_link_libraries(client lib_daemon lib_logger lib_exception)
 
 
 find_package(Boost COMPONENTS regex REQUIRED)
