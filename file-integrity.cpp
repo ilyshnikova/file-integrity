@@ -18,7 +18,7 @@
 
 WorkSpace::WorkSpace()
 : DaemonBase("127.0.0.1", "8081", 0)
-, checksum_table("CheckSums.db", "./db")
+, checksum_table("CheckSums.db", "/var/db")
 {
 	if (!fork()) {
 		Daemon();

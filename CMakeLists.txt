@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS "-std=c++0x -Wall ")
+set(CMAKE_CXX_FLAGS "-std=c++0x -Wall  -gdwarf-3 -g")
 
 cmake_minimum_required(VERSION 3.0)
 

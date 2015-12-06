@@ -86,29 +86,31 @@ Table::Table(const std::string& table_name, const std::string& path)
 }
 
 
-Table::Rows::Rows(Db* pdb, bool is_end, const std::string& table_name, const std::string& path)
+Table::Rows::Rows(Db* pdb, bool end, const std::string& table_name, const std::string& path)
 : cursorp()
 , index(0)
 , key()
 , value()
-, is_end(is_end)
+, is_end(end)
 {
 	if (!is_end) {
 		pdb->cursor(NULL, &cursorp, 0);
 		int ret = cursorp->get(&key, &value, DB_NEXT);
-		is_end = (ret != 0);
+		is_end = (ret < 0);
+	} else {
+		index = -1;
 	}
 }
 
 bool Table::Rows::operator==(const Rows& other) const {
-	if (!is_end && !other.is_end) {
+	if (is_end && other.is_end) {
 		return true;
 	}
 	return index == other.index && is_end == other.is_end;
 }
 
 bool Table::Rows::operator!=(const Rows& other) const {
-	return !(other.is_end == is_end);
+	return !(*this == other);
 }
 
 Table::Rows& Table::Rows::operator++() {
