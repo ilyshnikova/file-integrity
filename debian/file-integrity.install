@@ -1,0 +1,3 @@
+fi-server /usr/bin/
+fi-client /usr/bin/
+file-integrity-client /usr/bin/

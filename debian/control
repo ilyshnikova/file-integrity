@@ -1,0 +1,24 @@
+Source: file-integrity
+Section: fi
+Priority: extra
+Maintainer: Anastasiya Ilyshnikova  <ilyshnikova@yandex.ru>
+Build-Depends:
+	debhelper (>=7.0.50),
+	gcc-multilib,
+	libudev-dev(>=5.3),
+	libdb++-dev(>=5.3),
+	libssl-dev,
+Standards-Version: 0.0.1
+
+Package: file-integrity
+Architecture: any
+Section: fi
+Priority: extra
+Depends:
+	rlwrap,
+	libdb++-dev(>=5.3),
+	libudev-dev(>=5.3),
+	libssl-dev,
+Description: common apache2 settings
+
+

@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS "-std=c++0x -Wall ")
+set(CMAKE_CXX_FLAGS "-std=c++0x -Wall  -gdwarf-3 -g")
 
 cmake_minimum_required(VERSION 3.0)
 
@@ -12,12 +12,8 @@ add_executable(daemon daemon.cpp)
 target_link_libraries(daemon lib_exception lib_logger lib_server)
 
 add_library(lib_client STATIC client.cpp)
-add_executable(client client.cpp)
-target_link_libraries(client lib_daemon lib_logger lib_exception)
-
-
-find_package(Boost COMPONENTS regex REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
+add_executable(file-integrity-client client.cpp)
+target_link_libraries(file-integrity-client lib_daemon lib_logger lib_exception)
 
 
 find_package(BerkeleyDB REQUIRED)
@@ -31,5 +27,5 @@ add_library(lib_db STATIC BerkeleyDB.cpp)
 add_library(lib_file_integrity STATIC file-integrity.cpp)
 add_executable(fi-server fi-server.cpp)
 
-target_link_libraries(fi-server lib_daemon lib_logger lib_exception lib_file_integrity lib_db ${Boost_LIBRARIES} ${BDB_LIBRARY} ${OpenSSL_LIBRARIES})
+target_link_libraries(fi-server lib_daemon lib_logger lib_exception lib_file_integrity lib_db  ${BDB_LIBRARY} ${OpenSSL_LIBRARIES})
 

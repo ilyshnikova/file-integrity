@@ -1,7 +1,6 @@
 #include <openssl/md5.h>
 #include <fstream>
 
-#include <boost/regex.hpp>
 #include "BerkeleyDB.h"
 #include "daemon.h"
 #include "file-integrity.h"
@@ -12,13 +11,14 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <regex>
 
 
 /*	WorkSpace	*/
 
 WorkSpace::WorkSpace()
 : DaemonBase("127.0.0.1", "8081", 0)
-, checksum_table("CheckSums.db", "./db")
+, checksum_table("CheckSums.db", "/var/db")
 {
 	if (!fork()) {
 		Daemon();
@@ -29,27 +29,20 @@ WorkSpace::WorkSpace()
 }
 
 std::string WorkSpace::Respond(const std::string& query) {
-
-	boost::smatch match;
+	const char* cquery = query.c_str();
+	std::cmatch match;
 
 	try {
 		if (
-			boost::regex_match(
-				query,
-				match,
-				boost::regex("\\s*")
-			)
+			std::regex_match(cquery, match, std::regex("\\s*"))
 		) {
 			return query;
 		} else if (
-			boost::regex_match(
-				query,
-				match,
-				boost::regex("check\\s+file\\s+(.+)")
-			)
+			std::regex_match(cquery, match, std::regex("check\\s+file\\s+(.+)"))
+
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
-				throw FIException(142142, "File with name " + match[1] + " does not exits.");
+				throw FIException(142142, "File with name " + std::string(match[1]) + " does not exits.");
 			}
 			if (CheckFile(match[1])) {
 				return "File hasn't changed.";
@@ -57,45 +50,30 @@ std::string WorkSpace::Respond(const std::string& query) {
 				return "File has changed.";
 			}
 		} else if (
-			boost::regex_match(
-				query,
-				match,
-				boost::regex("add\\s+file\\s+(.+)")
-			)
+			std::regex_match(cquery, match, std::regex("add\\s+file\\s+(.+)"))
+
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
-				throw FIException(171142, "File with name " + match[1] + " does not exits.");
+				throw FIException(171142, "File with name " +std::string(match[1]) + " does not exits.");
 			}
 
 			AddCheckSum(match[1]);
 		} else if (
-			boost::regex_match(
-				query,
-				match,
-				boost::regex("delete\\s+file\\s+(.+)")
-			)
-		) {
-			checksum_table.Delete(match[1]);
+			std::regex_match(cquery, match, std::regex("delete\\s+file\\s+(.+)"))
+	 	) {
+			checksum_table.Delete(std::string(match[1]));
 		} else if (
-			boost::regex_match(
-				query,
-				match,
-				boost::regex("update\\s+file\\s+(.+)")
-			)
+			std::regex_match(cquery, match, std::regex("update\\s+file\\s+(.+)"))
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
-				throw FIException(171142, "File with name " + match[1] + " does not exits.");
+				throw FIException(171142, "File with name " + std::string(match[1]) + " does not exits.");
 			}
 
 			AddCheckSum(match[1]);
 			return "Ok";
 
 		} else if (
-			boost::regex_match(
-				query,
-				match,
-				boost::regex("help")
-			)
+			std::regex_match(cquery, match, std::regex("\\s*help\\s*"))
 		) {
 			return
 				std::string("Queries:\n")

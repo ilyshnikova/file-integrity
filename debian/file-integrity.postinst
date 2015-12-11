@@ -1,0 +1,3 @@
+pgrep fi-server && kill -9 $(pgrep fi-server)
+pgrep fi-client && kill -9 $(pgrep fi-client)
+fi-server > dev/null &
