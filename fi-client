@@ -1,1 +1,1 @@
-rlwrap ./client
+rlwrap /usr/bin/file-integrity-client
