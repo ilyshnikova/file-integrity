@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <regex>
-
+#include "execute.h"
 
 /*	WorkSpace	*/
 
@@ -34,11 +34,19 @@ std::string WorkSpace::Respond(const std::string& query) {
 
 	try {
 		if (
-			std::regex_match(cquery, match, std::regex("\\s*"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*")
+			)
 		) {
 			return query;
 		} else if (
-			std::regex_match(cquery, match, std::regex("check\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*check\\s+file\\s+(.+)\\s*")
+			)
 
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
@@ -50,7 +58,11 @@ std::string WorkSpace::Respond(const std::string& query) {
 				return "File has changed.";
 			}
 		} else if (
-			std::regex_match(cquery, match, std::regex("add\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*add\\s+file\\s+(.+)\\s*")
+			)
 
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
@@ -59,11 +71,19 @@ std::string WorkSpace::Respond(const std::string& query) {
 
 			AddCheckSum(match[1]);
 		} else if (
-			std::regex_match(cquery, match, std::regex("delete\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*delete\\s+file\\s+(.+)\\s*")
+			)
 	 	) {
 			checksum_table.Delete(std::string(match[1]));
 		} else if (
-			std::regex_match(cquery, match, std::regex("update\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*update\\s+file\\s+(.+)\\s*")
+			)
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
 				throw FIException(171142, "File with name " + std::string(match[1]) + " does not exits.");
@@ -73,14 +93,35 @@ std::string WorkSpace::Respond(const std::string& query) {
 			return "Ok";
 
 		} else if (
-			std::regex_match(cquery, match, std::regex("\\s*help\\s*"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*add\\s+files\\s+(.+)\\s*")
+			)
+		) {
+			ExecuteHandler ex(" find / | grep -E \'" + std::string(match[1]) + "\'");
+			std::string file_name;
+			std::string files;
+			while (ex >> file_name) {
+				files += file_name + " : " + Respond("add file " + file_name) + "\n";
+			}
+			return files;
+
+		} else if (
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*help\\s*")
+			)
 		) {
 			return
 				std::string("Queries:\n")
 				+"\tadd file <filename>\n"
 				+ "\tdelete file <filename>\n"
 				+ "\tcheck file <filname>\n"
-				+ "\tupdate file <filename>";
+				+ "\tupdate file <filename>\n"
+				+ "\tadd files <regexp>";
+
 		} else {
 			return "Incorrent query.";
 		}
