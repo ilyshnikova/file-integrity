@@ -1,1 +1,4 @@
 /var/db
+/var/db/FileIntegrity
+/var/db/FileIntegrity/InotifysDescriptors
+/var/db/FileIntegrity/CheckSums
