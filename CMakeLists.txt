@@ -24,14 +24,11 @@ find_package(BerkeleyDB REQUIRED)
 include_directories(${DB_INCLUDE_DIRS})
 
 find_package(Threads REQUIRED)
-include_directories(${Threads_INCLUDE_DIRS})
-
-MESSAGE("1: ${Threads_INCLUDE_DIRS}")
-message("2: ${Threads_LIBRARIES}")
+include_directories(${Threads_INCLUDE_DIR})
 
 add_library(db STATIC BerkeleyDB.cpp)
 add_library(file_integrity STATIC file-integrity.cpp)
 add_executable(fi-server fi-server.cpp)
 
-target_link_libraries(fi-server daemon logger exception file_integrity execute db ${Threads_LIBRARIES} -pthread ${BDB_LIBRARY} ${OpenSSL_LIBRARIES})
+target_link_libraries(fi-server daemon logger exception file_integrity execute db ${Threads_LIBRARIES}  ${CMAKE_THREAD_LIBS_INIT}  ${BDB_LIBRARY} ${OpenSSL_LIBRARIES})
 
