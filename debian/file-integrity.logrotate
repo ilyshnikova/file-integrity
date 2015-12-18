@@ -1,0 +1,5 @@
+/file-integrity.log
+{
+	weekly
+	rotate 2
+}
