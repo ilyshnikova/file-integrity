@@ -1,1 +1,5 @@
-rlwrap /usr/bin/file-integrity-client
+if [ -f './client' ]; then
+	echo 'runing local client' && rlwrap ./file-integrity-client
+else
+	rlwrap /usr/bin/file-integrity-client
+fi

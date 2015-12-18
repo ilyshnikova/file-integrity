@@ -51,7 +51,6 @@ private:
 	std::string path;
 	DbEnv env;
 	Db* pdb;
-	std::vector<std::unordered_map<std::string, StringType> > select_query;
 
 
 	class Rows {
@@ -86,11 +85,11 @@ public:
 
 	Table& Insert(const StringType& key, const StringType& value);
 
-	StringType Select(const std::string& key) const;
+	StringType Select(const StringType& key) const;
 
-	void Delete(const std::string& keuy) const;
+	void Delete(const StringType& key) const;
 
-	bool DoesKeyExist(const std::string& key) const;
+	bool DoesKeyExist(const StringType& key) const;
 
 	Rows begin();
 

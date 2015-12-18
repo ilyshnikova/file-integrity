@@ -1,6 +1,5 @@
 #include <openssl/md5.h>
 #include <fstream>
-
 #include "BerkeleyDB.h"
 #include "daemon.h"
 #include "file-integrity.h"
@@ -8,24 +7,49 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstdio>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <regex>
+#include <sys/types.h>
+#include <sys/inotify.h>
+#include <limits.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <atomic>
 
+
+#include "execute.h"
 
 /*	WorkSpace	*/
 
 WorkSpace::WorkSpace()
 : DaemonBase("127.0.0.1", "8081", 0)
-, checksum_table("CheckSums.db", "/var/db")
+, checksum_table("CheckSums.db", "/var/db/FileIntegrity/CheckSums/")
+, files_by_ind_table("FilesNamesByInotifysDescriptors.db", "/var/db/FileIntegrity/InotifysDescriptors/")
+, ind_by_files_table("InotifysDescriptorsByFilesNames.db", "/var/db/FileIntegrity/InotifysDescriptors/")
+, inotify(inotify_init())
+, m()
 {
-	if (!fork()) {
-		Daemon();
-		wait(NULL);
-	} else {
-		RecCheck();
-	}
+	pthread_mutexattr_t a;
+	pthread_mutexattr_init(&a);
+	pthread_mutexattr_settype(&a, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&m, &a);
+	pthread_mutexattr_destroy(&a);
+
+	AddFilesToInotify();
+	pthread_t id;
+	pthread_create(&id, NULL, StatInotify, this);
+	Daemon();
+
+
+//	if (!fork()) {
+//		Daemon();
+//		wait(NULL);
+//	} else {
+//		RecCheck();
+//	}
 }
 
 std::string WorkSpace::Respond(const std::string& query) {
@@ -34,12 +58,19 @@ std::string WorkSpace::Respond(const std::string& query) {
 
 	try {
 		if (
-			std::regex_match(cquery, match, std::regex("\\s*"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*")
+			)
 		) {
 			return query;
 		} else if (
-			std::regex_match(cquery, match, std::regex("check\\s+file\\s+(.+)"))
-
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*check\\s+file\\s+(.+)\\s*")
+			)
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
 				throw FIException(142142, "File with name " + std::string(match[1]) + " does not exits.");
@@ -50,20 +81,44 @@ std::string WorkSpace::Respond(const std::string& query) {
 				return "File has changed.";
 			}
 		} else if (
-			std::regex_match(cquery, match, std::regex("add\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*add\\s+file\\s+(.+)\\s*")
+			)
 
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
 				throw FIException(171142, "File with name " +std::string(match[1]) + " does not exits.");
 			}
-
+			pthread_mutex_lock(&m);
+			AddFileToInotify(std::string(match[1]));
+//			inotify_add_watch(inotify, std::string(match[1]).c_str(), IN_ALL_EVENTS);
 			AddCheckSum(match[1]);
+			pthread_mutex_unlock(&m);
+
 		} else if (
-			std::regex_match(cquery, match, std::regex("delete\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*delete\\s+file\\s+(.+)\\s*")
+			)
 	 	) {
+
+			pthread_mutex_lock(&m);
+			int wd = ind_by_files_table.Select(std::string(match[1]));
+			logger << wd;
+			ind_by_files_table.Delete(std::string(match[1]));
+			files_by_ind_table.Delete(wd);
 			checksum_table.Delete(std::string(match[1]));
+			inotify_rm_watch(inotify, wd);
+			pthread_mutex_unlock(&m);
 		} else if (
-			std::regex_match(cquery, match, std::regex("update\\s+file\\s+(.+)"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*update\\s+file\\s+(.+)\\s*")
+			)
 		) {
 			if (access(std::string(match[1]).c_str(), F_OK ) == -1) {
 				throw FIException(171142, "File with name " + std::string(match[1]) + " does not exits.");
@@ -73,14 +128,35 @@ std::string WorkSpace::Respond(const std::string& query) {
 			return "Ok";
 
 		} else if (
-			std::regex_match(cquery, match, std::regex("\\s*help\\s*"))
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*add\\s+files\\s+(.+)\\s*")
+			)
+		) {
+			ExecuteHandler ex(" find / | grep -E \'" + std::string(match[1]) + "\'");
+			std::string file_name;
+			std::string files;
+			while (ex >> file_name) {
+				files += file_name + " : " + Respond("add file " + file_name) + "\n";
+			}
+			return files;
+
+		} else if (
+			std::regex_match(
+				cquery,
+				match,
+				std::regex("\\s*help\\s*")
+			)
 		) {
 			return
 				std::string("Queries:\n")
 				+"\tadd file <filename>\n"
 				+ "\tdelete file <filename>\n"
 				+ "\tcheck file <filname>\n"
-				+ "\tupdate file <filename>";
+				+ "\tupdate file <filename>\n"
+				+ "\tadd files <regexp>";
+
 		} else {
 			return "Incorrent query.";
 		}
@@ -131,7 +207,7 @@ std::string WorkSpace::GetAllFile(const std::string& file_name) const {
 
 	}
 
-	logger << "\"" +  file  + "\"";
+//	logger << "\"" +  file  + "\"";
 
 	return file;
 }
@@ -153,15 +229,22 @@ bool WorkSpace::CheckFile(const std::string& file_name) const {
 	return (FilesEvaluation(file_name) == std::string(checksum_table.Select(file_name)));
 }
 
+void WorkSpace::SendEmail(const std::string& message, const std::string& mail) {
+	std::string query = "echo \"" + message + "\" | mail -s \"file-integrity\" \"" + mail  + "\"";
+	logger << query;
+	logger << mail;
+	system(query.c_str());
+}
 
-void WorkSpace::RecCheck() {
+void* WorkSpace::RecCheck(void*) {
 	while (true) {
 		for (auto it = checksum_table.begin(); it != checksum_table.end(); ++it) {
 			if (!CheckFile(it.Key())) {
 				std::string message = "File " + std::string(it.Key()) + " has changed.";
-				std::string mail = "echo \"" + message + "\" | mail -s \"file-integrity\" \"ilyshnikova@yandex.ru\"";
-				logger << mail;
-				system(mail.c_str());
+				SendEmail(
+					"File " + std::string(it.Key()) + " has changed.",
+					"ilyshnikova@yandex.ru"
+				);
 				logger << std::string("!!!!  ")	+ std::string(it.Key())  + "  changed !!!!";
 
 			} else {
@@ -172,6 +255,80 @@ void WorkSpace::RecCheck() {
 
 			sleep(5);
 	}
+	return NULL;
 }
 
+void WorkSpace::Inotify() {
+	size_t EVENT_SIZE(sizeof (struct inotify_event));
+	size_t EVENT_BUF_LEN(1024 * (EVENT_SIZE + 16));
+	char buffer[EVENT_BUF_LEN];
 
+	while (1) {
+		int i = 0;
+
+		int length = read(inotify, buffer, EVENT_BUF_LEN);
+
+		if (length < 0) {
+			perror("read");
+		}
+
+		while (i < length) {
+			struct inotify_event *event = (struct inotify_event *) &buffer[i];
+
+			std::string file_name;
+
+			try {
+				file_name = std::string(files_by_ind_table.Select(event->wd));
+			} catch (std::exception& e) {
+				continue;
+			}
+			if (event->mask & IN_CLOSE_WRITE && !CheckFile(file_name)) {
+				logger << "file " + file_name + "was close after opet to write";
+
+				SendEmail(
+					"File " + file_name + " has changed.",
+					"ilyshnikova@yandex.ru"
+				);
+				logger << "file " + file_name + " changed(inotify)";
+				AddCheckSum(file_name);
+			}
+
+			if (event->mask & IN_ATTRIB) {
+				std::string file_name = std::string(files_by_ind_table.Select(event->wd));
+				SendEmail(
+					"Attribs of file " + file_name + " has changed.",
+					"ilyshnikova@yandex.ru"
+				);
+				logger << "attr of file " + file_name + " changed(inotify)";
+			}
+
+			i += EVENT_SIZE + event->len;
+		}
+	}
+}
+
+void* WorkSpace::StatInotify(void* arg) {
+	((WorkSpace*)arg)->Inotify();
+	return NULL;
+}
+
+void WorkSpace::AddFileToInotify(const std::string& file_name) {
+
+	pthread_mutex_lock(&m);
+	files_by_ind_table.Insert(
+		inotify_add_watch(inotify, file_name.c_str(), IN_ALL_EVENTS),
+		file_name
+	);
+	ind_by_files_table.Insert(
+		file_name,
+		inotify_add_watch(inotify, file_name.c_str(), IN_ALL_EVENTS)
+	);
+	pthread_mutex_unlock(&m);
+}
+
+void WorkSpace::AddFilesToInotify() {
+	for (auto it = checksum_table.begin(); it != checksum_table.end(); ++it) {
+		logger << "add file " + std::string(it.Key())  + " to inotify";
+		AddFileToInotify(it.Key());
+	}
+}

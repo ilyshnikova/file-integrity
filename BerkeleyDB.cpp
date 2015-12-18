@@ -77,7 +77,6 @@ Table::Table(const std::string& table_name, const std::string& path)
 , path(path)
 , env(0)
 , pdb()
-, select_query()
 {
 	env.set_error_stream(&logger);
 	env.open(path.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
@@ -143,13 +142,16 @@ Table& Table::Insert(const StringType& key, const StringType& value) {
 	Dbt db_key(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	Dbt db_value(const_cast<char*>(std::string(value).data()), std::string(value).size() + 1);
 
+	logger << "Insert into the table " + table_name + "(" + std::string(key) + ", " + std::string(value)  + ")";
+
+
 	pdb->put(NULL, &db_key, &db_value, 0);
 
 	return *this;
 }
 
 
-StringType Table::Select(const std::string& key) const {
+StringType Table::Select(const StringType& key) const {
 	Dbt db_key(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	char buffer[1024];
 	Dbt data;
@@ -157,23 +159,24 @@ StringType Table::Select(const std::string& key) const {
 	data.set_ulen(1024);
 	data.set_flags(DB_DBT_USERMEM);
 	if (pdb->get(NULL, &db_key, &data, 0) == DB_NOTFOUND) {
-		throw FIException(145131, "Value with key " + key + " does not exist.");
+		throw FIException(145131, "Value with key " + std::string(key) + " does not exist in  " + table_name  + ".");
 	}
 
 	return StringType((char*)(data.get_data()));
 }
 
-void Table::Delete(const std::string& key) const {
+void Table::Delete(const StringType& key) const {
+	logger << "Delete from table " + table_name + " key " + std::string(key);
 	if (!DoesKeyExist(key))  {
-		throw FIException(120312, "Key " + key + " does not exist in db.");
+		throw FIException(120312, "Key " + std::string(key) + " does not exist in db " + table_name  + ".");
 	}
 	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	if (pdb->del(NULL, &dkey, 0) != 0) {
-		throw FIException(124532, "Can't delete " + key + ".");
+		throw FIException(124532, "Can't delete " + std::string(key) + ".");
 	}
 }
 
-bool Table::DoesKeyExist(const std::string& key) const {
+bool Table::DoesKeyExist(const StringType& key) const {
 	Dbt data;
 	Dbt dkey(const_cast<char*>(std::string(key).data()), std::string(key).size() + 1);
 	return (pdb->get(NULL, &dkey, &data, 0) != DB_NOTFOUND);

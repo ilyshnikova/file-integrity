@@ -7,6 +7,12 @@
 class WorkSpace : public DaemonBase {
 private:
 	Table checksum_table;
+	Table files_by_ind_table;
+	Table ind_by_files_table;
+	int inotify;
+	pthread_mutex_t m;
+
+
 
 	std::string Respond(const std::string& query);
 
@@ -20,7 +26,17 @@ private:
 
 	void AddCheckSum(const std::string& file_name);
 
-	void RecCheck();
+	void* RecCheck(void*);
+
+	void Inotify();
+
+	static void* StatInotify(void*);
+
+	void SendEmail(const std::string& message, const std::string& mail);
+
+	void AddFileToInotify(const std::string& file_name);
+
+	void AddFilesToInotify();
 
 public:
 
