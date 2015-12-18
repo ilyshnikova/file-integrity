@@ -8,6 +8,7 @@ Build-Depends:
 	libudev-dev(>=5.3),
 	libdb++-dev(>=5.3),
 	libssl-dev,
+	inotify-tools,
 Standards-Version: 0.0.1
 
 Package: file-integrity
@@ -19,6 +20,9 @@ Depends:
 	libdb++-dev(>=5.3),
 	libudev-dev(>=5.3),
 	libssl-dev,
+	inotify-tools,
+	exim4,
+	exim4-config,
 Description: common apache2 settings
 
 

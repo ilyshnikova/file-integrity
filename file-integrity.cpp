@@ -275,8 +275,16 @@ void WorkSpace::Inotify() {
 		while (i < length) {
 			struct inotify_event *event = (struct inotify_event *) &buffer[i];
 
-			if (event->mask & IN_MODIFY) {
-				std::string file_name = std::string(files_by_ind_table.Select(event->wd));
+			std::string file_name;
+
+			try {
+				file_name = std::string(files_by_ind_table.Select(event->wd));
+			} catch (std::exception& e) {
+				continue;
+			}
+			if (event->mask & IN_CLOSE_WRITE && !CheckFile(file_name)) {
+				logger << "file " + file_name + "was close after opet to write";
+
 				SendEmail(
 					"File " + file_name + " has changed.",
 					"ilyshnikova@yandex.ru"
