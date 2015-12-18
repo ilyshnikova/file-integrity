@@ -1,3 +1,8 @@
-dh $@
+
+build:
+	cmake CMakeLists.txt
+
+%:
+	dh $@
 
 
