@@ -185,9 +185,6 @@ TerminalClient::TerminalClient(const std::string& ip, const std::string& port)
 /*    DaemonBase      */
 
 int DaemonBase::Connect() {
-//	std::string ip = "127.0.0.1";
-//	std::string port = "8081";
-
 	int socketfd = Start();
 
 
