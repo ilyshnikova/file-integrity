@@ -62,11 +62,11 @@ File Integrity.
 5. fi-client (запустится клиент, через который можно добавлять файлы для контроля над ними, удалять, обновлять и т.д., команды, делающие это, можно узнать, набрав help)
 
 
-Без установки пакета: ```cmake CMakeLists.txt```
+Без установки пакета:
 
 1. Скачать репозиторий и зайти в папку file-integrity.
 
-2. ``` make ```(если программа уже была запущена ранее выполнить ```pgrep fi-server && kill -9 $(pgrep fi-server) && pgrep fi-client && kill -9 $(pgrep fi-client) ```)
+2. ```cmake CMakeLists.txt &&  make ```(если программа уже была запущена ранее выполнить ```pgrep fi-server && kill -9 $(pgrep fi-server) && pgrep fi-client && kill -9 $(pgrep fi-client) ```)
 
 3. ``` ./fi-server > /file-integrity.log &```
 
