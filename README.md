@@ -70,6 +70,7 @@ File Integrity.
 5. ``` ./fi-client  ```
 
 
+
 ```
 integrity> help
 Queries:
